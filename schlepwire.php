@@ -240,14 +240,17 @@ if (isset( $download)) {
 	<i>
 	<h3>USAGE</h3>
 	<p>
-		Use <b>schlep</b> to create a package, which includes all source and the DB export.
+		Open <b>source.com/schlepwire.php</b> in your browser<br>
+		<b>schlep</b> to create a package, which includes all source and the DB export.<br>
 		<b>Download</b> the package. <br>
 		FTP the package to the destination server's root, along with $this_prog.<br>
-		Invoke $this_prog, and <b>unschlep</b> to install.<br>
-		It extract all source code and will import the DB.
+		Open <b>destination.com/schlepwire.php</b> in your browser and <b>unschlep</b> to install.<br>
+		It extracts all source code and imports the DB.<br>
+		<b>test</b> that your site works with a simple link.
 	</p>
 	</i>
 	<hr>
+
 
 <?php
 	if (isset( $schlep)) {
