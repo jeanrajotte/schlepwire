@@ -7,6 +7,9 @@
 * Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
 * Unpack a schlep file and rehydrate a site at the destination
 * 
+* @version 0.3
+*	Add UnSQL action
+*
 * @version 0.2
 *	repair unzipping across O/Ses
 *
@@ -40,10 +43,6 @@
 define('CUR_DIR', dirname(realpath(__FILE__)));
 define('CONFIG_FILE', 'site/config.php');
 
-if (!file_exists( CONFIG_FILE )) {
-	die('ERROR: This does not appear to be a ProcessWire site. Nothing to do here!');
-}
-
 define( 'PROCESSWIRE', true);
 define( 'ME', 'SchlepWire');
 
@@ -68,6 +67,11 @@ function schlep_files() {
 function show_status() {
 	$fnames = glob('./schlep-*.zip');
 	if (!count($fnames)) {
+		if (!file_exists( CONFIG_FILE )) {
+			echo "<h3>This does not appear to be a ProcessWire site, so, nothing to schlep.<br>And there's nothing to unschlep.</h3>";
+			return;
+		}
+
 		echo <<<END
 <h2>Create a new package</h2>
 <form method='POST'>
@@ -84,6 +88,10 @@ $s
 END;
 	} else {
 		$fname = basename( $fnames[0] );
+		$sql_fname = str_replace('.zip', '.sql', $fname);
+		$only_sql = file_exists($sql_fname)
+			? " or <button name='unsql' value='unsql'>Import SQL Only</button>"
+			: '';
 		echo <<<END
 <form id='go' method='POST'>
 	<input type='hidden' name='fname' value='$fname' />
@@ -92,6 +100,7 @@ END;
 		<button name='unschlep' value='unschlep'>Unschlep</button>
 		or
 		<button name='download' value='download'>Download</button>
+		$only_sql
 	</p>
 </form>
 <a href='/'>Test the site</a> and <b>remember to remove schlep* files from the root</b>. 
@@ -205,6 +214,14 @@ function unschlep() {
 	$zip->close();
 	echo '<h4>Extracted ' . basename( $fname ). '</h4>';
 
+	unsql();
+}
+
+function unsql() {
+	extract( $_REQUEST );
+	if (!file_exists($fname)) {
+		die('File not found: ' . $fname);
+	}
 	$db_fname = str_replace('.zip', '.sql', $fname);
 
 	// die($db_name);
@@ -284,6 +301,8 @@ if (isset( $download)) {
 		schlep();
 	} elseif (isset( $unschlep)) {
 		unschlep();
+	} elseif (isset( $unsql)) {
+		unsql();
 	} 
 	show_status();
 
