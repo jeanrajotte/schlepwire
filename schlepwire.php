@@ -38,7 +38,9 @@ if (!file_exists( CONFIG_FILE )) {
 }
 
 define( 'PROCESSWIRE', true);
-define( 'ME', 'SCHLEPWIRE');
+define( 'ME', 'SchlepWire');
+
+define( 'DEBUG', false);
 
 $this_prog = basename( __FILE__ );
 
@@ -85,7 +87,7 @@ END;
 		<button name='download' value='download'>Download</button>
 	</p>
 </form>
-<a href='/'>Test the site</a>
+<a href='/'>Test the site</a> and <b>remember to remove schlep* files from the root</b>. 
 <hr/>
 END;
 	}
@@ -100,10 +102,9 @@ function zip_relative( $zip, $dname) {
 	);
 
 	foreach ($files as $name => $file) {
-	    // keep relative path
-	    $filePath = $file;
-	    // Add current file to archive
-	    $zip->addFile($filePath);
+	    // keep relative path, but replace O/S specific chars
+	    $zip->addFile( $file, str_replace(DIRECTORY_SEPARATOR, "/", $file) );
+
 	}
 
 }
@@ -115,7 +116,7 @@ function _mysql_args() {
 	return  // '-v' .
 		' "--host='.$config->dbHost
 		.'" "--port='.$config->dbPort
-		.'" "--password='.$config->dbPass
+		.'" "--password='.$config->dbPass . (DEBUG ? '222' : '')
 		.'" "--user='.$config->dbUser
 		.'" '.$config->dbName;
 }
@@ -129,14 +130,17 @@ function schlep() {
 	$db_fname = "schlep-$ts.sql";
 	$opts = '--single-transaction -v "--result-file='.$db_fname.'"' . _mysql_args();
 	$cmd = "mysqldump $opts";
-	echo "<pre>";
 	// echo "Running: $cmd<br/>";
 	exec( $cmd . ' 2>&1', $a, $res );
-	echo "</pre>";
 	if ($res===0) {
 		echo '<h4>Created ' . basename( $db_fname ). '</h4>';
 	} else {
-		echo "<h3>SQL Export failed with code: $res</h3>";
+		$s = join("\n", $a);
+		echo <<<END
+	<h3>SQL Export failed with code: $res</h3>
+	<pre>$s</pre>
+END;
+		return;
 	}
 
 	$zip_fname = str_replace('.sql', '.zip', $db_fname );
@@ -152,7 +156,7 @@ function schlep() {
 	$me = basename(__FILE__);
 	foreach( $files as $file ) {
 		if ($file!==$me) {
-			$zip->addFile( $file );
+			$zip->addFile( $file, str_replace(DIRECTORY_SEPARATOR, "\t", $file) );
 		}
 	}
 
@@ -190,13 +194,15 @@ function unschlep() {
 	$opts = _mysql_args();
 	$cmd = "mysql $opts < $db_fname";
 
-	echo "<pre>";
-	exec( $cmd, $a, $res );
-	echo "</pre>";
+	exec( $cmd . ' 2>&1', $a, $res );
 	if ($res === 0) {
 		echo '<h4>Imported ' . basename( $db_fname ). '</h4>';
 	} else {
-		echo "<h3>SQL Import FAILED with code: $res</h3>";
+		$s = join("\n", $a);
+		echo <<<END
+	<h3>SQL Import failed with code: $res</h3>
+	<pre>$s</pre>
+END;
 	}
 }
 
@@ -225,11 +231,15 @@ if (isset( $download)) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-  <title>SCHLEPWIRE - moving your processwire site</title>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<title><?php echo ME; ?> - moving your processwire site</title>
+
+	<style>
+		h3 { color: red; }
+	</style>
 
 </head>
 
@@ -238,7 +248,7 @@ if (isset( $download)) {
 	<h1><?php echo ME; ?></h1>
 	<hr>
 	<i>
-	<h3>USAGE</h3>
+	<h2>USAGE</h2>
 	<p>
 		Open <b>source.com/schlepwire.php</b> in your browser<br>
 		<b>schlep</b> to create a package, which includes all source and the DB export.<br>
