@@ -4,6 +4,8 @@
 
 schlepwire.php
 
+version 0.1
+
 Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
 
 The MIT License (MIT)

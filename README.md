@@ -1,7 +1,7 @@
 schlepwire
 ==========
 
-A simple PHP file to move a whole ProcessWire site and DB.
+A simple PHP program to move a whole ProcessWire site and DB.
 
 ## USAGE
 
@@ -25,7 +25,7 @@ There is crude, with minimal safety fussing. It relies on having your config.php
 			$config->dbPort = 'production';
 			$config->httpHosts = array( 'production.com', 'www.production.com');
 
-		} elseif (preg_match( '/jejotte.com/', $_SERVER['HTTP_HOST'])) {
+		} elseif (preg_match( '/staging.com/', $_SERVER['HTTP_HOST'])) {
 			// staging
 			$config->dbHost = 'staging';
 			$config->dbName = 'staging';
