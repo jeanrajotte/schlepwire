@@ -1,35 +1,40 @@
 <?php
 
-/*
-
-schlepwire.php
-
-version 0.1
-
-Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
-
-The MIT License (MIT)
-
-Copyright (c) 2014 Jean Rajotte
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
+/**
+*
+* SchlepWire 0.x
+*
+* Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
+* Unpack a schlep file and rehydrate a site at the destination
+* 
+* @version 0.2
+*	repair unzipping across O/Ses
+*
+* @version 0.1
+*	initial checkin
+*
+* The MIT License (MIT)
+* 
+* Copyright (c) 2014 Jean Rajotte
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*
 */
 
 define('CUR_DIR', dirname(realpath(__FILE__)));
@@ -181,14 +186,24 @@ function unschlep() {
 	if (!$zip->open( $fname)) {
 		die('Cannot open zip: ' . $fname);
 	}
-	$res = $zip->extractTo('.');
+	$fname = realpath($fname);	// abso path
+	for($i = 0; $i < $zip->numFiles; $i++) {
+		$filename = $zip->getNameIndex($i);
+	    $dest_file = str_replace( '/', DIRECTORY_SEPARATOR, $filename);
+	    $dest_dir = dirname($dest_file);
+	    if (!file_exists($dest_dir)) {
+	        mkdir( $dest_dir, 0777, true);
+	    }
+	    // the source needs to match the local OS, it seems
+	    if (!is_dir($dest_file)) {
+	    	if (!copy("zip://".$fname."#".$filename, $dest_file)) {
+				echo '<h3>ZIP Extract of ' . basename( $fname ). " FAILED at $filename!</h3>";
+				return;
+	    	}
+	    }
+	}           
 	$zip->close();
-	if ($res) {
-		echo '<h4>Extracted ' . basename( $fname ). '</h4>';
-	} else {
-		echo '<h3>ZIP Extract of ' . basename( $fname ). ' FAILED!</h3>';
-		return;
-	}
+	echo '<h4>Extracted ' . basename( $fname ). '</h4>';
 
 	$db_fname = str_replace('.zip', '.sql', $fname);
 
