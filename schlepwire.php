@@ -33,7 +33,6 @@ SOFTWARE.
 define('CUR_DIR', dirname(realpath(__FILE__)));
 define('CONFIG_FILE', 'site/config.php');
 
-// load the bits of config we need, is all...
 if (!file_exists( CONFIG_FILE )) {
 	die('ERROR: This does not appear to be a ProcessWire site. Nothing to do here!');
 }
@@ -109,6 +108,7 @@ function zip_relative( $zip, $dname) {
 
 }
 
+// load the bits of config we need, is all...
 function _mysql_args() {
 	$config = new X;
 	include CONFIG_FILE ;
