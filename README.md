@@ -37,7 +37,7 @@ This is fun!
 
 - FTP the package to the destination server's root, along with **schlepwire.php**
 - Open **destination.com/schlepwire.php** in your browser and **unschlep** to install.
-- It extracts all source code and **try** imports the DB.
+- It extracts all source code and **tries** to import the DB.
 
 It **fails** because it's a different domain and the [config.php](#config-php-configuration) is for the other domain, not this new one. And there's probably no DB in place. So...
 

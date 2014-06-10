@@ -7,6 +7,10 @@
 * Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
 * Unpack a schlep file and rehydrate a site at the destination
 * 
+* @version 0.4
+*	Add 'working' message when action takes time. 
+*	Reference USAGE to the README.md on github
+*
 * @version 0.3
 *	Add UnSQL action
 *
@@ -75,7 +79,7 @@ function show_status() {
 		echo <<<END
 <h2>Create a new package</h2>
 <form method='POST'>
-	<button name='schlep' value='schlep' >Schlep</button>
+	<button id='schlep' name='schlep' value='schlep' >Schlep</button>
 </form>
 <hr/>
 END;
@@ -90,14 +94,14 @@ END;
 		$fname = basename( $fnames[0] );
 		$sql_fname = str_replace('.zip', '.sql', $fname);
 		$only_sql = file_exists($sql_fname)
-			? " or <button name='unsql' value='unsql'>Import SQL Only</button>"
+			? " or <button id='unsql' name='unsql' value='unsql'>Import SQL Only</button>"
 			: '';
 		echo <<<END
 <form id='go' method='POST'>
 	<input type='hidden' name='fname' value='$fname' />
 	<p>
 		<b>$fname: </b>
-		<button name='unschlep' value='unschlep'>Unschlep</button>
+		<button id='unschlep' name='unschlep' value='unschlep'>Unschlep</button>
 		or
 		<button name='download' value='download'>Download</button>
 		$only_sql
@@ -273,26 +277,43 @@ if (isset( $download)) {
 
 	<style>
 		h3 { color: red; }
+		#bam {
+			position: fixed;
+			top: 0px;
+			bottom: 0px;
+			left: 0px;
+			right: 0px;
+			background-color: silver;
+			opacity: 0.5;
+			z-index: 10;
+			display: none;
+		}
+		#bam h1 {
+			position : fixed;
+			top: 0px;
+			right: 0px;
+			background-color: #fff;
+			padding: 10px;
+		}
+
 	</style>
 
 </head>
 
 <body>
 
+	<div id='bam'>
+		<h1>Working!</h1>
+	</div>
+
 	<h1><?php echo ME; ?></h1>
 	<hr>
-	<i>
-	<h2>USAGE</h2>
-	<p>
-		Open <b>source.com/schlepwire.php</b> in your browser<br>
-		<b>schlep</b> to create a package, which includes all source and the DB export.<br>
-		<b>Download</b> the package. <br>
-		FTP the package to the destination server's root, along with $this_prog.<br>
-		Open <b>destination.com/schlepwire.php</b> in your browser and <b>unschlep</b> to install.<br>
-		It extracts all source code and imports the DB.<br>
-		<b>test</b> that your site works with a simple link.
-	</p>
-	</i>
+	<h4>
+		Visit the
+		<a href='http://github.com/jeanrajotte/schlepwire#schlepwire' target='_blank'>project's github page &#8599;</a>
+		 for documentation.
+	</h4>
+	
 	<hr>
 
 
@@ -307,6 +328,28 @@ if (isset( $download)) {
 	show_status();
 
 ?>
+
+<script>
+	function addListener( el, eventName, handler) {
+		if (el) {
+			if (el.addEventListener) {
+				el.addEventListener(eventName, handler, false);
+			}
+			else if (el.attachEvent) {
+				el.attachEvent('on' + eventName, handler);
+			}
+			else {
+				el['on' + eventName] = handler;
+			}
+		}
+	}
+	function working() {
+		document.getElementById('bam').style.display = 'block';	
+	}
+	addListener( document.getElementById('schlep'), 'click', working );
+	addListener( document.getElementById('unschlep'), 'click', working );
+	addListener( document.getElementById('unssql'), 'click', working );
+</script>
 </body>
 </html>
 
