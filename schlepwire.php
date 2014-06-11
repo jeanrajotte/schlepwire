@@ -107,7 +107,7 @@ END;
 		$only_sql
 	</p>
 </form>
-<a href='/'>Test the site</a> and <b>remember to remove schlep* files from the root</b>. 
+<a href='/' target='_blank'>Test the site &#8599;</a> and <b>remember to remove schlep* files from the root</b>. 
 <hr/>
 END;
 	}
