@@ -124,7 +124,7 @@ function zip_relative( $zip, $dname) {
 	foreach ($files as $name => $file) {
 	    // keep relative path, but replace O/S specific chars
 	    $zip->addFile( $file, str_replace(DIRECTORY_SEPARATOR, "/", $file) );
-
+	    dot();
 	}
 
 }
@@ -140,6 +140,19 @@ function _mysql_args() {
 		.'" "--user='.$config->dbUser
 		.'" '.$config->dbName;
 }
+
+function dot_init() {
+	echo "<p class='dots'>";
+}
+function dot() {
+	echo '.' . str_repeat(' ', 200);
+	flush();
+
+}
+function dot_end() {
+	echo "</p>";
+}
+
 
 // create a package
 function schlep() {
@@ -162,6 +175,7 @@ function schlep() {
 END;
 		return;
 	}
+	dot_init();
 
 	$zip_fname = str_replace('.sql', '.zip', $db_fname );
 	// Initialize archive object
@@ -178,8 +192,9 @@ END;
 		if ($file!==$me) {
 			$zip->addFile( $file, str_replace(DIRECTORY_SEPARATOR, "\t", $file) );
 		}
+		dot();
 	}
-
+	dot_end();
 	// Zip archive will be created only after closing object
 	if (!$zip->close()) {
 		echo "<h3>ERROR CLOSING zip: {$zip->getStatusString()}</h3>";
@@ -199,6 +214,7 @@ function unschlep() {
 	if (!$zip->open( $fname)) {
 		die('Cannot open zip: ' . $fname);
 	}
+	dot_init();
 	$fname = realpath($fname);	// abso path
 	for($i = 0; $i < $zip->numFiles; $i++) {
 		$filename = $zip->getNameIndex($i);
@@ -210,11 +226,13 @@ function unschlep() {
 	    // the source needs to match the local OS, it seems
 	    if (!is_dir($dest_file)) {
 	    	if (!copy("zip://".$fname."#".$filename, $dest_file)) {
-				echo '<h3>ZIP Extract of ' . basename( $fname ). " FAILED at $filename!</h3>";
+				echo '</p><h3>ZIP Extract of ' . basename( $fname ). " FAILED at $filename!</h3>";
 				return;
 	    	}
 	    }
-	}           
+	    dot();
+	}     
+	dot_end();      
 	$zip->close();
 	echo '<h4>Extracted ' . basename( $fname ). '</h4>';
 
@@ -226,6 +244,7 @@ function unsql() {
 	if (!file_exists($fname)) {
 		die('File not found: ' . $fname);
 	}
+	flush();
 	$db_fname = str_replace('.zip', '.sql', $fname);
 
 	// die($db_name);
@@ -244,6 +263,9 @@ END;
 	}
 }
 
+if(ini_get('zlib.output_compression')){ 
+    ini_set('zlib.output_compression', 'Off'); 
+}
 
 extract($_REQUEST);
 
