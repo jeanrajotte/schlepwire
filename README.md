@@ -14,7 +14,7 @@ A simple PHP program to move a whole ProcessWire site and DB.
 
 All you need is the schlepwire.php file in the root of the site you want to copy.
 
-NOTE: This is crude has minimal safety. It relies on having your [config.php](#config-php-configuration) set up to switch between site, and fail "elegantly"
+NOTE: This tool is crude and has minimal safety. It relies on having your [config.php](#config-php-configuration) set up to switch between site, and it fails "elegantly enough".
 
 
 ### <a name="creating-a-copy-of-a-site"></a>Creating a Copy of a Site 

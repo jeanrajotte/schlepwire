@@ -142,15 +142,15 @@ function _mysql_args() {
 }
 
 function dot_init() {
-	echo "<p class='dots'>";
+	// echo "<p class='dots'>";
 }
 function dot() {
-	echo '.' . str_repeat(' ', 200);
-	flush();
+	// echo '.' . str_repeat(' ', 200);
+	// flush();
 
 }
 function dot_end() {
-	echo "</p>";
+	// echo "</p>";
 }
 
 
