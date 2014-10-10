@@ -6,9 +6,9 @@
 *
 * Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
 * Unpack a schlep file and rehydrate a site at the destination
-* 
+*
 * @version 0.4
-*	Add 'working' message when action takes time. 
+*	Add 'working' message when action takes time.
 *	Reference USAGE to the README.md on github
 *
 * @version 0.3
@@ -21,19 +21,19 @@
 *	initial checkin
 *
 * The MIT License (MIT)
-* 
+*
 * Copyright (c) 2014 Jean Rajotte
-* 
+*
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
 * in the Software without restriction, including without limitation the rights
 * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 * copies of the Software, and to permit persons to whom the Software is
 * furnished to do so, subject to the following conditions:
-* 
+*
 * The above copyright notice and this permission notice shall be included in all
 * copies or substantial portions of the Software.
-* 
+*
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -51,6 +51,12 @@ define( 'PROCESSWIRE', true);
 define( 'ME', 'SchlepWire');
 
 define( 'DEBUG', false);
+
+// @apache_setenv('no-gzip', 1);
+@ini_set('zlib.output_compression', 0);
+@ini_set('implicit_flush', 1);
+for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
+ob_implicit_flush(1);
 
 $this_prog = basename( __FILE__ );
 
@@ -86,7 +92,7 @@ END;
 	} elseif (count($fnames)>1) {
 		$s = join('<br>', $fnames);
 		echo <<<END
-<h3>There is more than one Schlep package.</h3> 
+<h3>There is more than one Schlep package.</h3>
 <p>Please remove all but the one of interest:<br><br>
 $s
 END;
@@ -107,7 +113,7 @@ END;
 		$only_sql
 	</p>
 </form>
-<a href='/' target='_blank'>Test the site &#8599;</a> and <b>remember to remove schlep* files from the root</b>. 
+<a href='/' target='_blank'>Test the site &#8599;</a> and <b>remember to remove schlep* files from the root</b>.
 <hr/>
 END;
 	}
@@ -142,15 +148,15 @@ function _mysql_args() {
 }
 
 function dot_init() {
-	// echo "<p class='dots'>";
+	echo "<p class='dots'>";
 }
 function dot() {
-	// echo '.' . str_repeat(' ', 200);
-	// flush();
-
+	echo '.' . str_repeat(' ', 200);
+	flush();
+	set_time_limit( 20 );
 }
 function dot_end() {
-	// echo "</p>";
+	echo "</p>";
 }
 
 
@@ -231,8 +237,8 @@ function unschlep() {
 	    	}
 	    }
 	    dot();
-	}     
-	dot_end();      
+	}
+	dot_end();
 	$zip->close();
 	echo '<h4>Extracted ' . basename( $fname ). '</h4>';
 
@@ -263,16 +269,12 @@ END;
 	}
 }
 
-if(ini_get('zlib.output_compression')){ 
-    ini_set('zlib.output_compression', 'Off'); 
-}
-
 extract($_REQUEST);
 
 if (isset( $download)) {
 	if (!file_exists($fname)) {
 		die('File not found: ' . $fname);
-	}	
+	}
     header('Content-Description: File Transfer');
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename='.basename($fname));
@@ -286,6 +288,8 @@ if (isset( $download)) {
     readfile($fname);
     exit;
 }
+
+// header( 'Content-Encoding: identity' );
 
 ?>
 <!DOCTYPE html>
@@ -335,7 +339,7 @@ if (isset( $download)) {
 		<a href='http://github.com/jeanrajotte/schlepwire#schlepwire' target='_blank'>project's github page &#8599;</a>
 		 for documentation.
 	</h4>
-	
+
 	<hr>
 
 
@@ -346,7 +350,7 @@ if (isset( $download)) {
 		unschlep();
 	} elseif (isset( $unsql)) {
 		unsql();
-	} 
+	}
 	show_status();
 
 ?>
@@ -366,7 +370,7 @@ if (isset( $download)) {
 		}
 	}
 	function working() {
-		document.getElementById('bam').style.display = 'block';	
+		document.getElementById('bam').style.display = 'block';
 	}
 	addListener( document.getElementById('schlep'), 'click', working );
 	addListener( document.getElementById('unschlep'), 'click', working );
