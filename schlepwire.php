@@ -216,30 +216,38 @@ function unschlep() {
 	if (!file_exists($fname)) {
 		die('File not found: ' . $fname);
 	}
+
 	$zip = new ZipArchive;
 	if (!$zip->open( $fname)) {
 		die('Cannot open zip: ' . $fname);
 	}
-	dot_init();
-	$fname = realpath($fname);	// abso path
-	for($i = 0; $i < $zip->numFiles; $i++) {
-		$filename = $zip->getNameIndex($i);
-	    $dest_file = str_replace( '/', DIRECTORY_SEPARATOR, $filename);
-	    $dest_dir = dirname($dest_file);
-	    if (!file_exists($dest_dir)) {
-	        mkdir( $dest_dir, 0777, true);
-	    }
-	    // the source needs to match the local OS, it seems
-	    if (!is_dir($dest_file)) {
-	    	if (!copy("zip://".$fname."#".$filename, $dest_file)) {
-				echo '</p><h3>ZIP Extract of ' . basename( $fname ). " FAILED at $filename!</h3>";
-				return;
-	    	}
-	    }
-	    dot();
+
+	if (DIRECTORY_SEPARATOR==='/') {
+		// in a unix environment, just extract the whole
+		$zip->extractTo( dirname($fname));
+	} else {
+		dot_init();
+		$fname = realpath($fname);	// abso path
+		for($i = 0; $i < $zip->numFiles; $i++) {
+			$filename = $zip->getNameIndex($i);
+		    $dest_file = str_replace( '/', DIRECTORY_SEPARATOR, $filename);
+		    $dest_dir = dirname($dest_file);
+		    if (!file_exists($dest_dir)) {
+		        mkdir( $dest_dir, 0777, true);
+		    }
+		    // the source needs to match the local OS, it seems
+		    if (!is_dir($dest_file)) {
+		    	if (!copy("zip://".$fname."#".$filename, $dest_file)) {
+					echo '</p><h3>ZIP Extract of ' . basename( $fname ). " FAILED at $filename!</h3>";
+					return;
+		    	}
+		    }
+		    dot();
+		}
+		dot_end();
 	}
-	dot_end();
 	$zip->close();
+
 	echo '<h4>Extracted ' . basename( $fname ). '</h4>';
 
 	unsql();
