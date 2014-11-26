@@ -52,11 +52,6 @@ define( 'ME', 'SchlepWire');
 
 define( 'DEBUG', false);
 
-// @apache_setenv('no-gzip', 1);
-@ini_set('zlib.output_compression', 0);
-@ini_set('implicit_flush', 1);
-for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
-ob_implicit_flush(1);
 
 $this_prog = basename( __FILE__ );
 
@@ -75,7 +70,8 @@ function schlep_files() {
 
 // where we at
 function show_status() {
-	$fnames = glob('./schlep-*.zip');
+	echo "<div id='status-bottom'>";
+	$fnames = glob('./schlep-*.tar.gz');
 	if (!count($fnames)) {
 		if (!file_exists( CONFIG_FILE )) {
 			echo "<h3>This does not appear to be a ProcessWire site, so, nothing to schlep.<br>And there's nothing to unschlep.</h3>";
@@ -86,6 +82,8 @@ function show_status() {
 <h2>Create a new package</h2>
 <form method='POST'>
 	<button id='schlep' name='schlep' value='schlep' >Schlep</button>
+	or
+	<button id='schlep_sql_only' name='schlep_sql_only' value='schlep_sql_only' >Schlep SQL only</button>
 </form>
 <hr/>
 END;
@@ -98,7 +96,7 @@ $s
 END;
 	} else {
 		$fname = basename( $fnames[0] );
-		$sql_fname = str_replace('.zip', '.sql', $fname);
+		$sql_fname = str_replace('.tar.gz', '.sql', $fname);
 		$only_sql = file_exists($sql_fname)
 			? " or <button id='unsql' name='unsql' value='unsql'>Import SQL Only</button>"
 			: '';
@@ -117,21 +115,7 @@ END;
 <hr/>
 END;
 	}
-}
-
-function zip_relative( $zip, $dname) {
-
-	// Create recursive directory iterator
-	$files = new RecursiveIteratorIterator(
-	    new RecursiveDirectoryIterator( $dname ),
-	    RecursiveIteratorIterator::LEAVES_ONLY
-	);
-
-	foreach ($files as $name => $file) {
-	    // keep relative path, but replace O/S specific chars
-	    $zip->addFile( $file, str_replace(DIRECTORY_SEPARATOR, "/", $file) );
-	    dot();
-	}
+	echo "</div>";
 
 }
 
@@ -147,136 +131,239 @@ function _mysql_args() {
 		.'" '.$config->dbName;
 }
 
-function dot_init() {
-	echo "<p class='dots'>";
-}
-function dot() {
-	echo '.' . str_repeat(' ', 200);
-	flush();
-	set_time_limit( 20 );
-}
-function dot_end() {
-	echo "</p>";
-}
-
-
+////////////////////////////////
 // create a package
+////////////////////////////////
 function schlep() {
-	if (!class_exists( 'ZipArchive')) {
-		die( ME.' needs the ZipArchive class in your PHP install to function. Boom!');
-	}
 	$ts = date('Ymd-His');
-	$db_fname = "schlep-$ts.sql";
-	$opts = '--single-transaction -v "--result-file='.$db_fname.'"' . _mysql_args();
+
+	?>
+
+<pre id='console'></pre>
+<pre id='message'></pre>
+
+<script>
+
+(function($) {
+
+	var logIndex = 0;
+
+	function log( eid, msg ) {
+		var eid1 = 'x_' + logIndex++;
+		$(eid)
+		.append( msg )
+		.append( $("<hr id='" + eid1 + "' />"));
+		$('#' + eid1)[0].scrollIntoView();
+	}
+
+	function exportSql( ts ) {
+		log( '#console', 'Exporting SQL' );
+		$.get( '', { schlep_export_sql: ts }, function( data ) {
+			log( '#console', data );
+			testSql( ts );
+		});
+	}
+	function testSql( ts ) {
+		log( '#console', 'Testing SQL presence' );
+		$.get( '', { schlep_test_sql: ts }, function( data ) {
+			log( '#console', data );
+			if (data==='OK') {
+				log( '#message', "<h4>Created SQL for " + ts + "</h4>");
+				tar( ts );
+			}
+		});
+	}
+	function tar( ts ) {
+		log( '#console', 'Packaging all files' );
+		$.get( '', { schlep_tar: ts }, function( data ) {
+			log( '#console', data );
+			testTar( ts );
+		});
+	}
+	function testTar( ts ) {
+		log( '#console', 'Testing TAR completion' );
+		$.get( '', { schlep_tar_test: ts }, function( data ) {
+			log( '#console', data );
+			if (data==='OK') {
+				log( '#message', "<h4>Created TAR.GZ for " + ts + "</h4>");
+				conclude( ts );
+			}
+		});
+	}
+	function conclude( ts ) {
+		log( '#console', 'Cleaning up' );
+		$.get( '', { schlep_done: ts }, function( data ) {
+			log( '#console', data );
+			if (data.indexOf('OK') > -1) {
+				log('#message', "<h4>Done clean up</h4>");
+				log('#message', "<a href=''>Reload Schlepwire to continue</a>");
+			}
+		});		
+	}
+
+	$('document').ready(function() {
+
+		exportSql( '<?php echo $ts; ?>');
+	});
+
+})(jQuery);
+
+</script>
+
+	<?php
+}
+
+function schlep_export_sql( $ts ) {
+	$fname = "schlep-$ts.sql";
+	$opts = '--single-transaction -v "--result-file='.$fname.'"';
 	$cmd = "mysqldump $opts";
-	// echo "Running: $cmd<br/>";
-	exec( $cmd . ' 2>&1', $a, $res );
-	if ($res===0) {
-		echo '<h4>Created ' . basename( $db_fname ). '</h4>';
-	} else {
-		$s = join("\n", $a);
-		echo <<<END
-	<h3>SQL Export failed with code: $res</h3>
-	<pre>$s</pre>
-END;
+	echo "$cmd ...\n";
+	passthru( $cmd . " " . _mysql_args() . ' 2>&1');
+	return $fname;
+}
+function schlep_test_sql( $ts ) {
+	$fname = "schlep-$ts.sql";
+	echo is_file($fname) ? "OK" : "ERROR: not found: $fname";
+}
+
+function schlep_tar( $ts) {
+	$fname = "schlep-$ts.tar.gz";
+	$db_fname = "schlep-$ts.sql";
+	file_put_contents ( 'schleped.txt' , "schleped on $ts" );
+	$file_list = ".htaccess index.php *.md *.txt {$db_fname} wire/ site/ schleped.txt";
+	$cmd = "tar -cavWf {$fname} {$file_list}";
+	echo "$cmd\n";
+	passthru( $cmd );
+}
+function schlep_tar_test( $ts ) {
+	$fname = "schlep-$ts.tar.gz";
+	if (!is_file($fname)) {
+		echo "ERROR not found: $fname";
 		return;
 	}
-	dot_init();
-
-	$zip_fname = str_replace('.sql', '.zip', $db_fname );
-	// Initialize archive object
-	$zip = new ZipArchive;
-	if (!$zip->open( $zip_fname, ZipArchive::CREATE)) {
-		die('Cannot create archive');
+	if (is_file( './schleped.txt' )) {
+		unlink( './schleped.txt');
 	}
-
-	zip_relative( $zip, 'site');
-	zip_relative($zip, 'wire');
-	$files = _dir(CUR_DIR);
-	$me = basename(__FILE__);
-	foreach( $files as $file ) {
-		if ($file!==$me) {
-			$zip->addFile( $file, str_replace(DIRECTORY_SEPARATOR, "\t", $file) );
-		}
-		dot();
-	}
-	dot_end();
-	// Zip archive will be created only after closing object
-	if (!$zip->close()) {
-		echo "<h3>ERROR CLOSING zip: {$zip->getStatusString()}</h3>";
-	} else {
-		echo '<h4>Created ' . basename( $zip_fname ). '</h4>';
-	}
-	unlink($db_fname);
-	echo '<hr>';
+	$cmd = "tar -xf {$fname} schleped.txt";
+	exec( $cmd );
+	echo is_file( './schleped.txt' ) ? 'OK' : 'ERROR: taring did not finish w/ schleped.txt';
 }
 
+function schlep_done( $ts ) {
+	$fname = "schlep-$ts.sql";
+	unlink($fname);
+	unlink('schleped.txt');
+	echo 'OK';
+}
+
+////////////////////////////////
+// apply a package
+////////////////////////////////
 function unschlep() {
 	extract( $_REQUEST );
 	if (!file_exists($fname)) {
 		die('File not found: ' . $fname);
 	}
+	$db_fname = str_replace('.tar.gz', '.sql', $fname);
 
-	$zip = new ZipArchive;
-	if (!$zip->open( $fname)) {
-		die('Cannot open zip: ' . $fname);
+	?>
+
+<pre id='console'></pre>
+<pre id='message'></pre>
+
+<script>
+
+(function($) {
+
+	var logIndex = 0,
+		tarFname = '<?php echo $fname; ?>',
+		sqlFname = '<?php echo $db_fname; ?>';
+
+	function log( eid, msg ) {
+		var eid1 = 'x_' + logIndex++;
+		$(eid)
+		.append( msg )
+		.append( $("<hr id='" + eid1 + "' />"));
+		$('#' + eid1)[0].scrollIntoView();
 	}
 
-	if (DIRECTORY_SEPARATOR==='/') {
-		// in a unix environment, just extract the whole
-		$zip->extractTo( dirname($fname));
-	} else {
-		dot_init();
-		$fname = realpath($fname);	// abso path
-		for($i = 0; $i < $zip->numFiles; $i++) {
-			$filename = $zip->getNameIndex($i);
-		    $dest_file = str_replace( '/', DIRECTORY_SEPARATOR, $filename);
-		    $dest_dir = dirname($dest_file);
-		    if (!file_exists($dest_dir)) {
-		        mkdir( $dest_dir, 0777, true);
-		    }
-		    // the source needs to match the local OS, it seems
-		    if (!is_dir($dest_file)) {
-		    	if (!copy("zip://".$fname."#".$filename, $dest_file)) {
-					echo '</p><h3>ZIP Extract of ' . basename( $fname ). " FAILED at $filename!</h3>";
-					return;
-		    	}
-		    }
-		    dot();
-		}
-		dot_end();
+	function untar() {
+		log( '#console', 'Unpacking all files' );
+		$.get( '', { unschlep_untar: tarFname }, function( data ) {
+			log( '#console', data );
+			testUntar();
+		});
 	}
-	$zip->close();
+	function testUntar() {
+		log( '#console', 'Test Unpacking' );
+		$.get( '', { unschlep_untar_test: tarFname }, function( data ) {
+			log( '#console', data );
+			if (data==='OK') {
+				log( '#message', "<h4>Unpacked " + tarFname + "</h4>");
+				importSql();
+			}
+		});
+	}
+	function importSql( ) {
+		log( '#console', 'Importing SQL' );
+		$.get( '', { unschlep_import_sql: sqlFname }, function( data ) {
+			log( '#console', data );
+			log('#message', "<h4>SQL Imported from " + sqlFname + "</h4>");
+			conclude();
+		});
+	}
+	function conclude( ) {
+		log( '#console', 'Cleaning up' );
+		$.get( '', { unschlep_done: sqlFname }, function( data ) {
+			log( '#console', data );
+			log('#message', "<h4>Done clean up</h4>");
+			log('#message', "<a href=''>Reload Schlepwire to continue</a>");
+		});
+	}
 
-	echo '<h4>Extracted ' . basename( $fname ). '</h4>';
+	$('document').ready(function() {
+		untar( '<?php echo $fname; ?>');
+	});
 
-	unsql();
+})(jQuery);
+
+</script>
+
+	<?php
 }
 
-function unsql() {
-	extract( $_REQUEST );
-	if (!file_exists($fname)) {
+function unschlep_untar( $fname ) {
+	if (!file_exists( $fname )) {
 		die('File not found: ' . $fname);
 	}
-	flush();
-	$db_fname = str_replace('.zip', '.sql', $fname);
-
-	// die($db_name);
-	$opts = _mysql_args();
-	$cmd = "mysql $opts < $db_fname";
-
-	exec( $cmd . ' 2>&1', $a, $res );
-	if ($res === 0) {
-		echo '<h4>Imported ' . basename( $db_fname ). '</h4>';
-	} else {
-		$s = join("\n", $a);
-		echo <<<END
-	<h3>SQL Import failed with code: $res</h3>
-	<pre>$s</pre>
-END;
-	}
+	if (file_exists('./schleped.txt')) { unlink('./schleped.txt'); }
+	$cmd = "tar -xv --recursive-unlink -f {$fname}";
+	echo "$cmd\n";
+	passthru( $cmd );
 }
 
+function unschlep_untar_test( $fname ) {
+	echo file_exists( './schleped.txt' ) ? 'OK' : 'ERROR: no schleped.txt found';
+}
+
+function unschlep_import_sql( $fname ) {
+	if (!file_exists( $fname )) {
+		die('File not found: ' . $fname);
+	}
+	$opts = _mysql_args();
+	$cmd = "mysql $opts < $fname";
+	echo "mysql ... < $fname";
+	passthru( $cmd . ' 2>&1', $res );
+}
+function unschlep_done( $fname ) {
+	unlink($fname);
+	unlink('schleped.txt');
+	echo 'OK';
+}
+
+//////////////////////////////////////////
+// dispatcher
+//////////////////////////////////////////
 extract($_REQUEST);
 
 if (isset( $download)) {
@@ -294,8 +381,45 @@ if (isset( $download)) {
     ob_clean();
     flush();
     readfile($fname);
-    exit;
+    die();
+} elseif (isset( $schlep_export_sql )) {
+	header('Content-Type: html/text');
+	schlep_export_sql( $schlep_export_sql );
+	die();
+} elseif (isset( $schlep_test_sql )) {
+	header('Content-Type: html/text');
+	schlep_test_sql( $schlep_test_sql );
+	die();
+} elseif (isset( $schlep_tar )) {
+	header('Content-Type: html/text');
+	schlep_tar( $schlep_tar );
+	die();
+} elseif (isset( $schlep_tar_test )) {
+	header('Content-Type: html/text');
+	schlep_tar_test( $schlep_tar_test );
+	die();
+} elseif (isset( $schlep_done )) {
+	header('Content-Type: html/text');
+	schlep_done( $schlep_done );
+	die();
+} elseif (isset( $unschlep_untar )) {
+	header('Content-Type: html/text');
+	unschlep_untar( $unschlep_untar );
+	die();
+} elseif (isset( $unschlep_untar_test )) {
+	header('Content-Type: html/text');
+	unschlep_untar_test( $unschlep_untar_test );
+	die();
+} elseif (isset( $unschlep_import_sql )) {
+	header('Content-Type: html/text');
+	unschlep_import_sql( $unschlep_import_sql );
+	die();
+} elseif (isset( $unschlep_done )) {
+	header('Content-Type: html/text');
+	unschlep_done( $unschlep_done );
+	die();
 }
+
 
 // header( 'Content-Encoding: identity' );
 
@@ -329,8 +453,20 @@ if (isset( $download)) {
 			background-color: #fff;
 			padding: 10px;
 		}
+		#console {
+			height: 300px;
+			width: 80%;
+			padding: 10px;
+			border: solid silver 1px;
+			margin: 10px;
+			overflow: scroll;
+		}
+		#message {
+			margin: 10px;
+		}
 
 	</style>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 
 </head>
 
@@ -354,13 +490,27 @@ if (isset( $download)) {
 <?php
 	if (isset( $schlep)) {
 		schlep();
+
+	} elseif (isset( $schlep_sql_only)) {
+		echo '<pre>';
+		$fname = schlep_export_sql( date('Ymd-His') );
+		echo '</pre>';
+		echo "<h4>Created {$fname}</h4>";
+		show_status();
+
 	} elseif (isset( $unschlep)) {
 		unschlep();
-	} elseif (isset( $unsql)) {
-		unsql();
-	}
-	show_status();
 
+	} elseif (isset( $unsql)) {
+		echo '<pre>';
+		unschlep_import_sql( str_replace('.tar.gz', '.sql', $fname) );
+		echo '</pre>';
+		show_status();
+
+	} else {
+		show_status();
+
+	}
 ?>
 
 <script>
