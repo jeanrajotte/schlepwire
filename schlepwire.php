@@ -7,6 +7,10 @@
 * Containerize a processwire site, ALL code (including /wire/) and DB into a schelp-timestamp.zip file
 * Unpack a schlep file and rehydrate a site at the destination
 *
+* @version 0.5
+*	Use OS tar instead of ZipArchive
+*	Allow for run running process
+*
 * @version 0.4
 *	Add 'working' message when action takes time.
 *	Reference USAGE to the README.md on github
